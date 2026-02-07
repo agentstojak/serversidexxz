@@ -1477,11 +1477,20 @@ function UltimateHub:CreateTabs()
 	}
 
 	self.TabContents = {}
+	self.TabGroups = {}
 
 	for _, tabInfo in ipairs(tabs) do
 		local tab = self.Components:CreateTab(self.TabsContainer, tabInfo.icon, tabInfo.name, tabInfo.order)
 
-		-- Create content for this tab
+		-- Create content group for this tab
+		local contentGroup = Instance.new("CanvasGroup")
+		contentGroup.Name = tabInfo.name .. "Group"
+		contentGroup.Size = UDim2.new(1, 0, 1, 0)
+		contentGroup.BackgroundTransparency = 1
+		contentGroup.Visible = false
+		contentGroup.GroupTransparency = 1
+		contentGroup.Parent = self.ContentArea
+
 		local content = Instance.new("ScrollingFrame")
 		content.Name = tabInfo.name .. "Content"
 		content.Size = UDim2.new(1, 0, 1, 0)
@@ -1489,8 +1498,7 @@ function UltimateHub:CreateTabs()
 		content.BorderSizePixel = 0
 		content.ScrollBarThickness = 6
 		content.ScrollBarImageColor3 = self.Config.Theme.Primary
-		content.Visible = false
-		content.Parent = self.ContentArea
+		content.Parent = contentGroup
 
 		local contentLayout = Instance.new("UIListLayout")
 		contentLayout.Padding = UDim.new(0, 15)
@@ -1509,6 +1517,7 @@ function UltimateHub:CreateTabs()
 		padding.Parent = content
 
 		self.TabContents[tabInfo.name] = content
+		self.TabGroups[tabInfo.name] = contentGroup
 
 		tab.MouseButton1Click:Connect(function()
 			self:SwitchTab(tabInfo.name)
@@ -1524,18 +1533,18 @@ function UltimateHub:CreateTabs()
 end
 
 function UltimateHub:SwitchTab(tabName)
-	for name, content in pairs(self.TabContents) do
+	for name, contentGroup in pairs(self.TabGroups) do
 		if name == tabName then
-			content.Visible = true
-			self.Utility:Tween(content, {
+			contentGroup.Visible = true
+			self.Utility:Tween(contentGroup, {
 				GroupTransparency = 0
 			}, 0.3)
 		else
-			self.Utility:Tween(content, {
+			self.Utility:Tween(contentGroup, {
 				GroupTransparency = 1
 			}, 0.2)
 			task.delay(0.2, function()
-				content.Visible = false
+				contentGroup.Visible = false
 			end)
 		end
 	end
