@@ -1498,6 +1498,8 @@ function UltimateHub:CreateTabs()
 
 	self.TabContents = {}
 	self.TabGroups = {}
+	self.TabContents = {}
+	self.TabGroups = {}
 
 	for _, tabInfo in ipairs(tabs) do
 		local tab = self.Components:CreateTab(self.TabsContainer, tabInfo.icon, tabInfo.name, tabInfo.order)
@@ -1520,6 +1522,24 @@ function UltimateHub:CreateTabs()
 		content.ScrollBarImageColor3 = self.Config.Theme.Primary
 		content.Parent = contentGroup
 
+		-- Create content for this tab
+		local contentGroup = Instance.new("CanvasGroup")
+		contentGroup.Name = tabInfo.name .. "Group"
+		contentGroup.Size = UDim2.new(1, 0, 1, 0)
+		contentGroup.BackgroundTransparency = 1
+		contentGroup.Visible = false
+		contentGroup.GroupTransparency = 1
+		contentGroup.Parent = self.ContentArea
+		
+		local content = Instance.new("ScrollingFrame")
+		content.Name = tabInfo.name .. "Content"
+		content.Size = UDim2.new(1, 0, 1, 0)
+		content.BackgroundTransparency = 1
+		content.BorderSizePixel = 0
+		content.ScrollBarThickness = 6
+		content.ScrollBarImageColor3 = self.Config.Theme.Primary
+		content.Parent = contentGroup
+		
 		local contentLayout = Instance.new("UIListLayout")
 		contentLayout.Padding = UDim.new(0, 15)
 		contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -1538,6 +1558,8 @@ function UltimateHub:CreateTabs()
 
 		self.TabContents[tabInfo.name] = content
 		self.TabGroups[tabInfo.name] = contentGroup
+		self.TabContents[tabInfo.name] = content
+		self.TabGroups[tabInfo.name] = contentGroup
 
 		tab.MouseButton1Click:Connect(function()
 			self:SwitchTab(tabInfo.name)
@@ -1552,6 +1574,23 @@ function UltimateHub:CreateTabs()
 	self:SwitchTab("Home")
 end
 
+function UltimateHub:SwitchTab(tabName)
+	for name, contentGroup in pairs(self.TabGroups) do
+		if name == tabName then
+			contentGroup.Visible = true
+			self.Utility:Tween(contentGroup, {
+				GroupTransparency = 0
+			}, 0.3)
+		else
+			self.Utility:Tween(contentGroup, {
+				GroupTransparency = 1
+			}, 0.2)
+			task.delay(0.2, function()
+				contentGroup.Visible = false
+			end)
+		end
+	end
+end
 function UltimateHub:SwitchTab(tabName)
 	for name, contentGroup in pairs(self.TabGroups) do
 		if name == tabName then
