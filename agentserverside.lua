@@ -20,7 +20,7 @@ local Lighting = game:GetService("Lighting")
 local StarterGui = game:GetService("StarterGui")
 
 local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
+local Mouse = LocalPlayer and LocalPlayer:GetMouse() or nil
 
 -- ═══════════════════════════════════════════════════════════
 --                    CONFIGURATION
@@ -62,7 +62,7 @@ UltimateHub.Config = {
 	ToggleKey = Enum.KeyCode.RightShift,
 
 	-- Security
-	OwnerUserId = LocalPlayer.UserId,
+	OwnerUserId = LocalPlayer and LocalPlayer.UserId or 0,
 	RequireAuth = false,
 
 	-- Performance
@@ -168,6 +168,17 @@ function Utility:GetTimestamp()
 end
 
 UltimateHub.Utility = Utility
+
+function UltimateHub:GetActivePlayer()
+	return self.TargetPlayer or LocalPlayer
+end
+
+function UltimateHub:SetTargetPlayer(player)
+	self.TargetPlayer = player
+	if player then
+		self.Config.OwnerUserId = player.UserId
+	end
+end
 
 -- ═══════════════════════════════════════════════════════════
 --                    ENHANCED PATTERN DETECTION
@@ -527,9 +538,10 @@ InjectionEngine.Method = "None"
 InjectionEngine.Target = nil
 
 function InjectionEngine:TestRemote(remote, payloads)
+	local activePlayer = UltimateHub:GetActivePlayer()
 	payloads = payloads or {
 		function() return remote:FireServer("print('TEST_1')") end,
-		function() return remote:FireServer("print('TEST_2')", LocalPlayer) end,
+		function() return remote:FireServer("print('TEST_2')", activePlayer) end,
 		function() return remote:InvokeServer("print('TEST_3')") end,
 		function() return remote:FireServer({code = "print('TEST_4')"}) end,
 		function() return remote:FireServer({script = "print('TEST_5')"}) end,
@@ -804,11 +816,15 @@ UltimateHub.NotificationSystem = NotificationSystem
 local LoadingScreen = {}
 
 function LoadingScreen:Create()
+	local activePlayer = UltimateHub:GetActivePlayer()
+	if not activePlayer then
+		error("UltimateHub.Load(playerName) must be called with a valid player when running on the server.")
+	end
 	local loading = Instance.new("ScreenGui")
 	loading.Name = "UltimateHubLoading"
 	loading.ResetOnSpawn = false
 	loading.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	loading.Parent = LocalPlayer:WaitForChild("PlayerGui")
+	loading.Parent = activePlayer:WaitForChild("PlayerGui")
 
 	local bg = Instance.new("Frame")
 	bg.Size = UDim2.new(1, 0, 1, 0)
@@ -1272,12 +1288,16 @@ UltimateHub.Components = Components
 -- ═══════════════════════════════════════════════════════════
 
 function UltimateHub:CreateGUI()
+	local activePlayer = self:GetActivePlayer()
+	if not activePlayer then
+		error("UltimateHub.Load(playerName) must be called with a valid player when running on the server.")
+	end
 	-- Main ScreenGui
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "UltimateHubGUI"
 	gui.ResetOnSpawn = false
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+	gui.Parent = activePlayer:WaitForChild("PlayerGui")
 
 	self.GUI = gui
 
@@ -1413,7 +1433,7 @@ function UltimateHub:CreateGUI()
 	avatar.Position = UDim2.new(0, 10, 0.5, -20)
 	avatar.BackgroundColor3 = self.Config.Theme.Primary
 	avatar.BorderSizePixel = 0
-	avatar.Image = Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+	avatar.Image = Players:GetUserThumbnailAsync(activePlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
 	avatar.Parent = userInfo
 
 	self.Utility:CreateCorner(avatar, 20)
@@ -1422,7 +1442,7 @@ function UltimateHub:CreateGUI()
 	username.Size = UDim2.new(1, -60, 0, 20)
 	username.Position = UDim2.new(0, 55, 0, 10)
 	username.BackgroundTransparency = 1
-	username.Text = LocalPlayer.Name
+	username.Text = activePlayer.Name
 	username.TextColor3 = self.Config.Theme.Text
 	username.TextSize = 13
 	username.Font = Enum.Font.GothamBold
@@ -2075,6 +2095,36 @@ function UltimateHub:CreateQuickActionsTab()
 	title.Font = Enum.Font.GothamBlack
 	title.TextXAlignment = Enum.TextXAlignment.Center
 	title.Parent = actions
+end
+
+function UltimateHub:Load(playerTarget)
+	if LocalPlayer then
+		self:SetTargetPlayer(LocalPlayer)
+	else
+		local target = nil
+		if typeof(playerTarget) == "Instance" and playerTarget:IsA("Player") then
+			target = playerTarget
+		elseif type(playerTarget) == "string" and playerTarget ~= "" then
+			target = Players:FindFirstChild(playerTarget)
+			if not target then
+				for _, player in ipairs(Players:GetPlayers()) do
+					if player.Name:lower() == playerTarget:lower() then
+						target = player
+						break
+					end
+				end
+			end
+		end
+
+		if not target then
+			error("UltimateHub.Load(playerName) requires a valid player name or Player instance.")
+		end
+
+		self:SetTargetPlayer(target)
+	end
+
+	self:Initialize()
+	return self
 end
 
 -- ═══════════════════════════════════════════════════════════
